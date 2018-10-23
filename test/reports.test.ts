@@ -9,10 +9,10 @@ import { Member } from '../src/models/member';
 let server: Server;
 let request: supertest.SuperTest<supertest.Test>;
 
-// TODO: Fix all errors
+// TODO: Change all :any's
 
-const signUpUsers = async members =>
-	await Promise.all<{ user: IMemberModel; token: string }>(
+const signUpUsers = members =>
+	Promise.all<{ user: IMemberModel; token: string }>(
 		members.map(u =>
 			request
 				.post('/api/auth/signup')
