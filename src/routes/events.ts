@@ -5,12 +5,7 @@ import { ObjectId } from 'mongodb';
 import { Event } from '../models/event';
 import { Member, IMemberModel } from '../models/member';
 import { auth, hasPermissions } from '../middleware/passport';
-import {
-	successRes,
-	errorRes,
-	sendAccountCreatedEmail,
-	hasPermission
-} from '../utils';
+import { successRes, errorRes, sendAccountCreatedEmail, hasPermission } from '../utils';
 export const router = express.Router();
 
 // TODO: Add auth to routes
@@ -29,9 +24,7 @@ router.get('/', async (req, res, next) => {
 		});
 		if (!contains) sortBy = 'eventTime';
 
-		const conditions = hasPermission(req.user, 'events')
-			? {}
-			: { privateEvent: { $ne: true } };
+		const conditions = hasPermission(req.user, 'events') ? {} : { privateEvent: { $ne: true } };
 
 		const results = await Event.find(
 			conditions,
@@ -40,6 +33,8 @@ router.get('/', async (req, res, next) => {
 			.sort({ [sortBy]: order })
 			.lean()
 			.exec();
+
+		console.log('RESULTS DELETE THIS THOUGH: ', results);
 
 		return successRes(res, {
 			events: results
@@ -58,10 +53,7 @@ router.post('/', auth(), hasPermissions(['events']), async (req, res) => {
 		if (!location) return errorRes(res, 400, 'Event must have a name');
 		const time = Date.parse(eventTime);
 		if (isNaN(time)) return errorRes(res, 400, 'Invalid event time');
-		if (
-			facebook &&
-			!facebook.match('((http|https)://)?(www[.])?facebook.com.*')
-		)
+		if (facebook && !facebook.match('((http|https)://)?(www[.])?facebook.com.*'))
 			return errorRes(res, 400, 'Must specify a url from Facebook');
 
 		const event = new Event({
@@ -82,8 +74,7 @@ router.post('/', auth(), hasPermissions(['events']), async (req, res) => {
 
 router.get('/:id', async (req, res) => {
 	try {
-		if (!ObjectId.isValid(req.params.id))
-			return errorRes(res, 400, 'Invalid event ID');
+		if (!ObjectId.isValid(req.params.id)) return errorRes(res, 400, 'Invalid event ID');
 		const user = await Event.findById(req.params.id)
 			.populate({
 				path: 'members',
@@ -99,8 +90,7 @@ router.get('/:id', async (req, res) => {
 // TODO: Change to put request
 router.post('/:id', async (req, res, next) => {
 	try {
-		if (!ObjectId.isValid(req.params.id))
-			return errorRes(res, 400, 'Invalid event ID');
+		if (!ObjectId.isValid(req.params.id)) return errorRes(res, 400, 'Invalid event ID');
 		const { name, privateEvent, eventTime, location, facebook } = req.body;
 		const eventBuilder = { privateEvent };
 		if (!name) return errorRes(res, 400, 'Event must have a name');
@@ -134,8 +124,7 @@ router.post('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
 	try {
-		if (!ObjectId.isValid(req.params.id))
-			return errorRes(res, 400, 'Invalid event ID');
+		if (!ObjectId.isValid(req.params.id)) return errorRes(res, 400, 'Invalid event ID');
 		const event = await Event.findById(req.params.id).exec();
 		if (!event) return errorRes(res, 400, 'Event does not exist');
 		await event.remove();
@@ -148,8 +137,7 @@ router.delete('/:id', async (req, res, next) => {
 router.post('/:id/checkin', async (req, res, next) => {
 	try {
 		const { name, email, memberID } = req.body;
-		if (!ObjectId.isValid(req.params.id))
-			return errorRes(res, 400, 'Invalid event ID');
+		if (!ObjectId.isValid(req.params.id)) return errorRes(res, 400, 'Invalid event ID');
 		const event = await Event.findById(req.params.id)
 			.populate({
 				path: 'members',
@@ -227,10 +215,8 @@ router.post('/:id/checkin', async (req, res, next) => {
 router.delete('/:id/checkin/:memberID', async (req, res, next) => {
 	try {
 		const { id, memberID } = req.params;
-		if (!ObjectId.isValid(id))
-			return errorRes(res, 400, 'Invalid event ID');
-		if (!ObjectId.isValid(memberID))
-			return errorRes(res, 400, 'Invalid member ID');
+		if (!ObjectId.isValid(id)) return errorRes(res, 400, 'Invalid event ID');
+		if (!ObjectId.isValid(memberID)) return errorRes(res, 400, 'Invalid member ID');
 		const [event, member] = await Promise.all([
 			Event.findById(id).exec(),
 			Member.findById(memberID).exec()

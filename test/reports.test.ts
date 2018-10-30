@@ -9,8 +9,6 @@ import { Member } from '../src/models/member';
 let server: Server;
 let request: supertest.SuperTest<supertest.Test>;
 
-// TODO: Change all :any's
-
 const signUpUsers = members =>
 	Promise.all<{ user: IMemberModel; token: string }>(
 		members.map(u =>
