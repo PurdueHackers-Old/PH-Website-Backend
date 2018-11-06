@@ -21,10 +21,16 @@ export const generateEvent = () => {
 	const name = faker.hacker.noun();
 	const eventTime = faker.date.past();
 	const location = faker.address.streetAddress();
+	const facebook = `https://www.facebook.com/events/${faker.random.number({
+		min: 100000000000000,
+		max: 999999999999999
+	})}/`;
+
 	return {
 		name,
 		eventTime,
-		location
+		location,
+		facebook
 	};
 };
 

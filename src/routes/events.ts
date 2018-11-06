@@ -5,12 +5,7 @@ import { ObjectId } from 'mongodb';
 import { Event } from '../models/event';
 import { Member, IMemberModel } from '../models/member';
 import { auth, hasPermissions } from '../middleware/passport';
-import {
-	successRes,
-	errorRes,
-	sendAccountCreatedEmail,
-	hasPermission
-} from '../utils';
+import { successRes, errorRes, sendAccountCreatedEmail, hasPermission } from '../utils';
 export const router = express.Router();
 
 // TODO: Add auth to routes
@@ -29,9 +24,7 @@ router.get('/', async (req, res, next) => {
 		});
 		if (!contains) sortBy = 'eventTime';
 
-		const conditions = hasPermission(req.user, 'events')
-			? {}
-			: { privateEvent: { $ne: true } };
+		const conditions = hasPermission(req.user, 'events') ? {} : { privateEvent: { $ne: true } };
 
 		const results = await Event.find(
 			conditions,
@@ -55,13 +48,10 @@ router.post('/', auth(), hasPermissions(['events']), async (req, res) => {
 		const { name, privateEvent, eventTime, location, facebook } = req.body;
 		if (!name) return errorRes(res, 400, 'Event must have a name');
 		if (!eventTime) return errorRes(res, 400, 'Event must have a time');
-		if (!location) return errorRes(res, 400, 'Event must have a name');
+		if (!location) return errorRes(res, 400, 'Event must have a location');
 		const time = Date.parse(eventTime);
 		if (isNaN(time)) return errorRes(res, 400, 'Invalid event time');
-		if (
-			facebook &&
-			!facebook.match('((http|https)://)?(www[.])?facebook.com.*')
-		)
+		if (facebook && !facebook.match('((http|https)://)?(www[.])?facebook.com.*'))
 			return errorRes(res, 400, 'Must specify a url from Facebook');
 
 		const event = new Event({
@@ -82,15 +72,17 @@ router.post('/', auth(), hasPermissions(['events']), async (req, res) => {
 
 router.get('/:id', async (req, res) => {
 	try {
-		if (!ObjectId.isValid(req.params.id))
-			return errorRes(res, 400, 'Invalid event ID');
-		const user = await Event.findById(req.params.id)
+		if (!ObjectId.isValid(req.params.id)) return errorRes(res, 400, 'Invalid event ID');
+		const event = await Event.findById(req.params.id)
 			.populate({
 				path: 'members',
 				model: Member
 			})
 			.exec();
-		return successRes(res, user);
+
+		if (event == null) return errorRes(res, 400, 'Event not found');
+
+		return successRes(res, event);
 	} catch (error) {
 		return errorRes(res, 500, error);
 	}
@@ -99,14 +91,13 @@ router.get('/:id', async (req, res) => {
 // TODO: Change to put request
 router.post('/:id', async (req, res, next) => {
 	try {
-		if (!ObjectId.isValid(req.params.id))
-			return errorRes(res, 400, 'Invalid event ID');
+		if (!ObjectId.isValid(req.params.id)) return errorRes(res, 400, 'Invalid event ID');
 		const { name, privateEvent, eventTime, location, facebook } = req.body;
 		const eventBuilder = { privateEvent };
 		if (!name) return errorRes(res, 400, 'Event must have a name');
 		else Object.assign(eventBuilder, { name });
 		if (!eventTime) return errorRes(res, 400, 'Event must have a time');
-		if (!location) return errorRes(res, 400, 'Event must have a name');
+		if (!location) return errorRes(res, 400, 'Event must have a location');
 		else Object.assign(eventBuilder, { location });
 		const time = Date.parse(eventTime);
 		if (isNaN(time)) return errorRes(res, 400, 'Invalid event time');
@@ -126,7 +117,14 @@ router.post('/:id', async (req, res, next) => {
 		if (!event) return errorRes(res, 400, 'Event does not exist');
 
 		await event.update(eventBuilder).exec();
-		return successRes(res, event.toJSON());
+		const updatedEvent = await Event.findById(req.params.id)
+			.populate({
+				path: 'members',
+				model: Member
+			})
+			.exec();
+
+		return successRes(res, updatedEvent.toJSON());
 	} catch (error) {
 		return errorRes(res, 500, error);
 	}
@@ -134,8 +132,7 @@ router.post('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
 	try {
-		if (!ObjectId.isValid(req.params.id))
-			return errorRes(res, 400, 'Invalid event ID');
+		if (!ObjectId.isValid(req.params.id)) return errorRes(res, 400, 'Invalid event ID');
 		const event = await Event.findById(req.params.id).exec();
 		if (!event) return errorRes(res, 400, 'Event does not exist');
 		await event.remove();
@@ -148,8 +145,8 @@ router.delete('/:id', async (req, res, next) => {
 router.post('/:id/checkin', async (req, res, next) => {
 	try {
 		const { name, email, memberID } = req.body;
-		if (!ObjectId.isValid(req.params.id))
-			return errorRes(res, 400, 'Invalid event ID');
+
+		if (!ObjectId.isValid(req.params.id)) return errorRes(res, 400, 'Invalid event ID');
 		const event = await Event.findById(req.params.id)
 			.populate({
 				path: 'members',
@@ -168,7 +165,7 @@ router.post('/:id/checkin', async (req, res, next) => {
 		// No ID, so search by name and email
 		if (!member) {
 			if (!name) return errorRes(res, 400, 'Invalid name');
-			if (!isEmail(email)) return errorRes(res, 400, 'Invalid email');
+			if (!email || !isEmail(email)) return errorRes(res, 400, 'Invalid email');
 			const m = await Member.findOne({
 				name,
 				email
@@ -227,10 +224,8 @@ router.post('/:id/checkin', async (req, res, next) => {
 router.delete('/:id/checkin/:memberID', async (req, res, next) => {
 	try {
 		const { id, memberID } = req.params;
-		if (!ObjectId.isValid(id))
-			return errorRes(res, 400, 'Invalid event ID');
-		if (!ObjectId.isValid(memberID))
-			return errorRes(res, 400, 'Invalid member ID');
+		if (!ObjectId.isValid(id)) return errorRes(res, 400, 'Invalid event ID');
+		if (!ObjectId.isValid(memberID)) return errorRes(res, 400, 'Invalid member ID');
 		const [event, member] = await Promise.all([
 			Event.findById(id).exec(),
 			Member.findById(memberID).exec()
