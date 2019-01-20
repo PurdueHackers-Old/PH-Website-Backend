@@ -256,7 +256,7 @@ describe('Event controller unit tests', () => {
 					memberWithTheDifferentName.email,
 					null
 				)
-			).rejects.toEqual('A member with a different name is associated with this email');
+			).rejects.toEqual(new BadRequestError('A member with a different name is associated with this email'));
 		});
 
 		it('Fails to check in user to event because the user is already checked in', async () => {
