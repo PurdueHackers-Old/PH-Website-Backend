@@ -7,6 +7,7 @@ import { Permission } from '../../src/models/permission';
 import { IEventModel, Event } from '../../src/models/event';
 import { EventsController } from '../../src/controllers/events.controller';
 import * as nock from 'nock';
+import { BadRequestError } from 'routing-controllers';
 
 let server: Server;
 let eventsController: EventsController;
@@ -99,12 +100,9 @@ describe('Event controller unit tests', () => {
 
 	describe('Get a single event', () => {
 		it('Fails to get an event because invalid ID', async () => {
-			try {
-				expect(await eventsController.getById('invalidID')).toThrowError();
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Invalid event ID');
-			}
+			await expect(eventsController.getById('invalidID')).rejects.toEqual(
+				new BadRequestError('Invalid event ID')
+			);
 		});
 
 		it('Successfully gets a single event', async () => {
@@ -138,29 +136,23 @@ describe('Event controller unit tests', () => {
 
 	describe('Update an event', () => {
 		it('Fails to update an event because invalid id', async () => {
-			try {
-				const updatedEvent = generateEvent();
-				updatedEvent.privateEvent = false;
+			const updatedEvent = generateEvent();
+			updatedEvent.privateEvent = false;
 
-				const id = 'Invalid ID';
-				await eventsController.updateEvent(id, updatedEvent);
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Invalid event ID');
-			}
+			const id = 'Invalid ID';
+			await expect(eventsController.updateEvent(id, updatedEvent)).rejects.toEqual(
+				new BadRequestError('Invalid event ID')
+			);
 		});
 
 		it('Fails to update an event because it doesnt exist', async () => {
-			try {
-				const updatedEvent = generateEvent();
-				updatedEvent.privateEvent = false;
+			const updatedEvent = generateEvent();
+			updatedEvent.privateEvent = false;
 
-				const id = server.mongoose.Types.ObjectId().toHexString();
-				await eventsController.updateEvent(id, updatedEvent);
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Event does not exist');
-			}
+			const id = server.mongoose.Types.ObjectId().toHexString();
+			await expect(eventsController.updateEvent(id, updatedEvent)).rejects.toEqual(
+				new BadRequestError('Event does not exist')
+			);
 		});
 
 		it('Successfully updates an event', async () => {
@@ -181,22 +173,16 @@ describe('Event controller unit tests', () => {
 
 	describe('Delete an event', () => {
 		it('Fails to delete an event because invalid id', async () => {
-			try {
-				await eventsController.deleteEvent('Invalid ID');
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Invalid event ID');
-			}
+			await expect(eventsController.deleteEvent('Invalid ID')).rejects.toEqual(
+				new BadRequestError('Invalid event ID')
+			);
 		});
 
 		it('Fails to delete an event because it doesnt exist', async () => {
-			try {
-				const id = server.mongoose.Types.ObjectId().toHexString();
-				await eventsController.deleteEvent(id);
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Event does not exist');
-			}
+			const id = server.mongoose.Types.ObjectId().toHexString();
+			await expect(eventsController.deleteEvent(id)).rejects.toEqual(
+				new BadRequestError('Event does not exist')
+			);
 		});
 
 		it('Successfully deletes an event', async () => {
@@ -217,98 +203,70 @@ describe('Event controller unit tests', () => {
 
 	describe('Checkin user to event', () => {
 		it('Fails to check in user to event because invalid event id', async () => {
-			try {
-				const memberID = server.mongoose.Types.ObjectId().toHexString();
-				await eventsController.checkin(
+			const memberID = server.mongoose.Types.ObjectId().toHexString();
+			await expect(
+				eventsController.checkin(
 					'Invalid id',
 					faker.name.findName(),
 					faker.internet.email(),
 					memberID
-				);
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Invalid event ID');
-			}
+				)
+			).rejects.toEqual(new BadRequestError('Invalid event ID'));
 		});
 
 		it('Fails to check in user to event because the event doesnt exist', async () => {
-			try {
-				const eventID = server.mongoose.Types.ObjectId().toHexString();
-				const memberID = server.mongoose.Types.ObjectId().toHexString();
-				await eventsController.checkin(
+			const eventID = server.mongoose.Types.ObjectId().toHexString();
+			const memberID = server.mongoose.Types.ObjectId().toHexString();
+			await expect(
+				eventsController.checkin(
 					eventID,
 					faker.name.findName(),
 					faker.internet.email(),
 					memberID
-				);
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Event does not exist');
-			}
+				)
+			).rejects.toEqual(new BadRequestError('Event does not exist'));
 		});
 
 		it('Fails to check in user to event because the user has no name', async () => {
-			try {
-				await eventsController.checkin(event._id, null, faker.internet.email(), null);
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Invalid name');
-			}
+			await expect(
+				eventsController.checkin(event._id, null, faker.internet.email(), null)
+			).rejects.toEqual(new BadRequestError('Invalid name'));
 		});
 
 		it('Fails to check in user to event because the user has no email', async () => {
-			try {
-				await eventsController.checkin(event._id, faker.name.findName(), null, null);
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Invalid email');
-			}
+			await expect(
+				eventsController.checkin(event._id, faker.name.findName(), null, null)
+			).rejects.toEqual(new BadRequestError('Invalid email'));
 		});
 
 		it('Fails to check in user to event because the user has an invalid email', async () => {
-			try {
-				await eventsController.checkin(
-					event._id,
-					faker.name.findName(),
-					'invalidEmail',
-					null
-				);
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Invalid email');
-			}
+			await expect(
+				eventsController.checkin(event._id, faker.name.findName(), 'invalidEmail', null)
+			).rejects.toEqual(new BadRequestError('Invalid email'));
 		});
 
 		it("Fails to check in user to event because the users email is associated with anothers user's account", async () => {
-			try {
-				const memberWithTheDifferentName = new Member({ ...generateUser(), name: 'name' });
-				await memberWithTheDifferentName.save();
+			const memberWithTheDifferentName = new Member({ ...generateUser(), name: 'name' });
+			await memberWithTheDifferentName.save();
 
-				await eventsController.checkin(
+			await expect(
+				eventsController.checkin(
 					event._id,
 					'differentname',
 					memberWithTheDifferentName.email,
 					null
-				);
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual(
-					'A member with a different name is associated with this email'
-				);
-			}
+				)
+			).rejects.toEqual('A member with a different name is associated with this email');
 		});
 
 		it('Fails to check in user to event because the user is already checked in', async () => {
-			try {
-				const user = await createUser();
+			const user = await createUser();
 
-				await eventsController.checkin(event._id, user.name, user.email, user._id);
+			await eventsController.checkin(event._id, user.name, user.email, user._id);
 
-				await eventsController.checkin(event._id, user.name, user.email, user._id);
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Member already checked in');
-			}
+			await expect(
+				eventsController.checkin(event._id, user.name, user.email, user._id)
+			).rejects.toEqual(new BadRequestError('Member already checked in'));
 		});
 
 		it('Successfully checks in user to event given a user id of a created member', async () => {
@@ -375,57 +333,41 @@ describe('Event controller unit tests', () => {
 
 	describe('Checkout of an event', () => {
 		it('Fails to checkout to an event because invalid event id', async () => {
-			try {
-				const memberID = server.mongoose.Types.ObjectId().toHexString();
-				await eventsController.checkout('Invalid id', memberID);
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Invalid event ID');
-			}
+			const memberID = server.mongoose.Types.ObjectId().toHexString();
+			await expect(eventsController.checkout('Invalid id', memberID)).rejects.toEqual(
+				new BadRequestError('Invalid event ID')
+			);
 		});
 
 		it('Fails to checkout to an event because event does not exist', async () => {
-			try {
-				const eventID = server.mongoose.Types.ObjectId().toHexString();
-				const memberID = server.mongoose.Types.ObjectId().toHexString();
+			const eventID = server.mongoose.Types.ObjectId().toHexString();
+			const memberID = server.mongoose.Types.ObjectId().toHexString();
 
-				await eventsController.checkout(eventID, memberID);
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Event does not exist');
-			}
+			await expect(eventsController.checkout(eventID, memberID)).rejects.toEqual(
+				new BadRequestError('Event does not exist')
+			);
 		});
 
 		it('Fails to checkout to an event because invalid member id', async () => {
-			try {
-				const eventID = server.mongoose.Types.ObjectId().toHexString();
+			const eventID = server.mongoose.Types.ObjectId().toHexString();
 
-				await eventsController.checkout(eventID, 'Invalid member id');
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Invalid member ID');
-			}
+			await expect(eventsController.checkout(eventID, 'Invalid member id')).rejects.toEqual(
+				new BadRequestError('Invalid member ID')
+			);
 		});
 
 		it('Fails to checkout to an event because member does not exist', async () => {
-			try {
-				const memberID = server.mongoose.Types.ObjectId().toHexString();
-
-				await eventsController.checkout(event._id, memberID);
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Member does not exist');
-			}
+			const memberID = server.mongoose.Types.ObjectId().toHexString();
+			await expect(eventsController.checkout(event._id, memberID)).rejects.toEqual(
+				new BadRequestError('Member does not exist')
+			);
 		});
 
 		it('Fails to check out member from event because they were never checked in', async () => {
-			try {
-				const member = await createUser();
-				await eventsController.checkout(event._id, member._id);
-			} catch (error) {
-				expect(error.httpCode).toEqual(400);
-				expect(error.message).toEqual('Member is not checked in to this event');
-			}
+			const member = await createUser();
+			await expect(eventsController.checkout(event._id, member._id)).rejects.toEqual(
+				new BadRequestError('Member is not checked in to this event')
+			);
 		});
 
 		it('Succesfully checks out member from event', async () => {
@@ -437,12 +379,8 @@ describe('Event controller unit tests', () => {
 			await member.save();
 			await event.save();
 
-			console.log('member', member);
-			console.log('event', event);
 			const eventAfterCheckout = await eventsController.checkout(event._id, member._id);
 			const memberAfterCheckout = await Member.findById(member._id).exec();
-			console.log('eventAfterCheckout', eventAfterCheckout);
-			console.log('memberAfterCheckout', memberAfterCheckout);
 
 			expect(eventAfterCheckout.members.length).toEqual(0);
 			expect(memberAfterCheckout.events.length).toEqual(0);
