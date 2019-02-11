@@ -1,6 +1,8 @@
 {
 	"debug": true,
-	"exec": "node -r ts-node/register ./src/index.ts",
+
+	"signal": "SIGTERM",
+	"exec": "ts-node src/index.ts",
 	"ignore": [
 		"mochawesome-report",
 		"node_modules",
@@ -14,5 +16,5 @@
 		"docs/*"
 	],
 	"watch": ["./src"],
-	"ext": "ts, gql"
+	"ext": "ts"
 }

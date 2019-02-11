@@ -4,12 +4,19 @@ import { IEventModel } from './event';
 import { IPermissionModel } from './permission';
 import { IJobModel } from './job';
 import { ILocationModel } from './location';
-
-export const memberStatuses = {
-	MEMBER: 'Member',
-	ALUMNI: 'Alumni',
-	INACTIVE: 'Inactive'
-};
+import {
+	IsEmail,
+	IsEnum,
+	Matches,
+	IsOptional,
+	IsIn,
+	IsUrl,
+	IsNotEmpty,
+	ValidateIf
+} from 'class-validator';
+import { IsPhoneNumber } from '../validators/phone';
+import { Exclude, Expose, Transform } from 'class-transformer';
+import { toBoolean, isNotEmpty } from '../utils';
 
 export const genders = {
 	MALE: 'Male',
@@ -18,41 +25,104 @@ export const genders = {
 	NO: 'No'
 };
 
-export interface IMemberModel extends Document {
+export const majors = [
+	'Computer Science',
+	'Computer Graphics Technology',
+	'Computer Information Technology',
+	'Electrical Computer Engineering',
+	'Electrical Engineering',
+	'First Year Engineering',
+	'Math',
+	'Mechanical Engineering',
+	'Other'
+];
+
+@Exclude()
+export class MemberDto {
+	@IsNotEmpty({ message: 'Please provide your first and last name' })
+	@Matches(/([a-zA-Z']+ )+[a-zA-Z']+$/, { message: 'Please provide your first and last name' })
+	@Expose()
 	name: string;
+	@IsNotEmpty({ message: 'Please provide a valid email address' })
+	@IsEmail({}, { message: 'Please provide a valid email address' })
+	@Expose()
 	email: string;
+	@IsNotEmpty()
+	@Expose()
 	graduationYear: number;
+	@Exclude()
 	password: string;
-	memberStatus: string;
-	permissions: IPermissionModel[];
-	events: IEventModel[];
-	locations: {
+	@IsOptional()
+	@IsEnum(genders, { message: 'Please provide a valid gender' })
+	@Expose()
+	gender?: string;
+	@IsOptional()
+	@Transform(toBoolean)
+	@Expose()
+	unsubscribed?: boolean;
+	@IsOptional()
+	@Transform(toBoolean)
+	@Expose()
+	privateProfile?: boolean;
+	@ValidateIf(isNotEmpty)
+	@IsPhoneNumber('USA', { message: 'Please provide a valid U.S. phone number' })
+	@Expose()
+	phone?: string;
+	setupEmailSent?: Date;
+	// @IsOptional()
+	@ValidateIf(isNotEmpty)
+	@IsIn(majors, { message: 'Please provide a valid major' })
+	@Expose()
+	major?: string;
+	@Expose()
+	picture?: string;
+	// @IsOptional()
+	@ValidateIf(isNotEmpty)
+	@Expose()
+	description?: string;
+	@ValidateIf(isNotEmpty)
+	@Matches(/(facebook|fb)/, { message: 'Invalid Facebook URL' })
+	@Expose()
+	facebook?: string;
+	@ValidateIf(isNotEmpty)
+	@Matches(/github/, { message: 'Invalid GitHub URL' })
+	@Expose()
+	github?: string;
+	@ValidateIf(isNotEmpty)
+	@Matches(/linkedin/, { message: 'Invalid Linkedin URL' })
+	@Expose()
+	linkedin?: string;
+	@ValidateIf(isNotEmpty)
+	@Matches(/devpost/, { message: 'Invalid Devpost URL' })
+	@Expose()
+	devpost?: string;
+	@ValidateIf(isNotEmpty)
+	@IsUrl({}, { message: 'Invalid website URL' })
+	@Expose()
+	website?: string;
+	@Expose()
+	resume?: string;
+	@Expose()
+	resumeLink?: string;
+	authenticatedAt?: Date;
+	rememberToken?: string;
+	resetPasswordToken?: string;
+	comparePassword(password: string) {
+		return password && bcrypt.compareSync(password, this.password);
+	}
+}
+
+export interface IMemberModel extends MemberDto, Document {
+	permissions?: IPermissionModel[];
+	events?: IEventModel[];
+	locations?: {
 		location: ILocationModel;
 		dateStart: Date;
 		dateEnd: Date;
 	}[];
-	jobs: IJobModel[];
-	gender: string;
-	unsubscribed: boolean;
-	privateProfile: boolean;
-	phone: string;
-	setupEmailSent: Date;
-	major: string;
-	picture: string;
-	description: string;
-	facebook: string;
-	github: string;
-	linkedin: string;
-	devpost: string;
-	website: string;
-	resume: string;
-	resumeLink: string;
+	jobs?: IJobModel[];
 	createdAt: Date;
 	updatedAt: Date;
-	authenticatedAt: Date;
-	rememberToken: string;
-	resetPasswordToken: string;
-	comparePassword(password: string): boolean;
 }
 
 const schema = new Schema(
@@ -74,11 +144,6 @@ const schema = new Schema(
 			type: String,
 			select: false,
 			default: ''
-		},
-		memberStatus: {
-			type: String,
-			enum: [...Object.values(memberStatuses)],
-			default: memberStatuses.MEMBER
 		},
 		gender: { type: String },
 		unsubscribed: {
@@ -150,7 +215,7 @@ schema.pre('save', async function(next) {
 
 schema.methods.comparePassword = function(password: string) {
 	const member = this as IMemberModel;
-	return bcrypt.compareSync(password, member.password);
+	return password && bcrypt.compareSync(password, member.password);
 };
 
 export const Member = model<IMemberModel>('Member', schema, 'members');

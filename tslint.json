@@ -24,6 +24,7 @@
 		"ordered-imports": false,
 		"object-literal-sort-keys": false,
 		"array-type": [true, "array"],
+		"member-access": false,
 		// "newline-per-chained-call": [true, { "ignoreChainWithDepth": 2 }],
 		// "newline-per-chained-call": [true, { "max-calls-per-line": 2 }],
 		"comma-dangle": false

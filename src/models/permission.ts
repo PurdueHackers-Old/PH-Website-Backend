@@ -1,9 +1,18 @@
 import { Document, Schema, model } from 'mongoose';
 import { IMemberModel } from './member';
+import { IsNotEmpty } from 'class-validator';
 
-export interface IPermissionModel extends Document {
+export class PermissionDto {
+	@IsNotEmpty({ message: 'Permission must have a name' })
 	name: string;
+	@IsNotEmpty({ message: 'Permission must have a description' })
 	description: string;
+}
+
+export interface IPermissionModel extends PermissionDto, Document {
+	// name: string;
+	// description: string;
+	organizer: number;
 	members: {
 		member: IMemberModel;
 		recordedBy: IMemberModel;
@@ -20,6 +29,10 @@ const schema = new Schema(
 		description: {
 			type: String,
 			required: true
+		},
+		organizer: {
+			type: Number,
+			default: 1
 		},
 		members: [
 			{
@@ -38,8 +51,4 @@ const schema = new Schema(
 	{ timestamps: true }
 );
 
-export const Permission = model<IPermissionModel>(
-	'Permission',
-	schema,
-	'permissions'
-);
+export const Permission = model<IPermissionModel>('Permission', schema, 'permissions');

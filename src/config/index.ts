@@ -5,21 +5,20 @@ const env = process.env;
 const config = {
 	// ...env,
 	PORT: env.PORT || 5000,
-	DB:
-		env.NODE_ENV === 'test'
-			? 'mongodb://localhost:27017/PH_Test'
-			: env.DB
-				? env.DB
-				: 'mongodb://localhost:27017/PH',
+	DB: env.DB || 'mongodb://localhost:27017/PH',
+	REDIS_URL: env.REDIS_URL || 'redis://localhost:6379',
 	SECRET: env.SECRET || 'my-secret',
 	EXPIRES_IN: env.EXPIRES_IN || 10000,
 	NODE_ENV: env.NODE_ENV || 'development',
 	CREDENTIAL_SECRET: env.CREDENTIAL_SECRET || 'CredentialSecret',
 	ORG_NAME: env.ORG_NAME || 'Purdue Hackers',
-	EMAIL: env.EMAIL || 'your@email.com',
+	EMAIL: env.EMAIL || 'my@email.com',
 	GC_BUCKET: env.GC_BUCKET || 'mybucket',
-	SENDGRID_KEY: env.SENDGRID_KEY || 'sendgridkey',
-	FACEBOOK_ACCESS_TOKEN: env.FACEBOOK_ACCESS_TOKEN || ''
+	GC_PROJECT_ID: env.GC_PROJECT_ID || 'myprojectid',
+	GC_PRIVATE_KEY: env.GC_PRIVATE_KEY || 'myprivatekey',
+	GC_CLIENT_EMAIL: env.GC_CLIENT_EMAIL || 'my@clientemail.com',
+	SENDGRID_KEY: env.SENDGRID_KEY || 'mysendgridkey',
+	FACEBOOK_ACCESS_TOKEN: env.FACEBOOK_ACCESS_TOKEN || 'myfbtoken'
 };
 
 export default config;

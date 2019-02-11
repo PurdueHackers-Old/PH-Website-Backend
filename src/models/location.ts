@@ -1,10 +1,16 @@
 import { Document, Schema, model } from 'mongoose';
 import { IMemberModel } from './member';
+import { IsNotEmpty } from 'class-validator';
 
-export interface ILocationModel extends Document {
-	loc: any;
+export class LocationDto {
+	@IsNotEmpty({ message: 'Location must have a name' })
 	name: string;
+	@IsNotEmpty({ message: 'Location must have a city' })
 	city: string;
+}
+
+export interface ILocationModel extends LocationDto, Document {
+	loc: any;
 	members: {
 		member: IMemberModel;
 		dateStart: Date;

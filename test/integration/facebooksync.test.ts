@@ -1,18 +1,20 @@
 import 'jest';
-import Server from '../src/server';
+import Server from '../../src/server';
 import * as supertest from 'supertest';
-import { spoofFacebookEvents } from '../src/utils/helper';
-import { testSyncFacebookEvents } from '../src/scheduler_scripts/syncFacebookEvents';
-import { Event } from '../src/models/event';
+import { spoofFacebookEvents } from '../helper';
+import { testSyncFacebookEvents } from '../../src/workers/facebook';
+import { Event } from '../../src/models/event';
 
 let server: Server;
 let request: supertest.SuperTest<supertest.Test>;
 
 describe('Facebook Event Integration Tests', () => {
 	beforeAll(() =>
-		Server.createInstance()
-			.then(s => (server = s))
-			.then(s => (request = supertest(s.app))));
+		Server.createInstance().then(s => {
+			server = s;
+			request = supertest(s.app);
+		})
+	);
 
 	it('Successfully adds new upcoming events from facebook to the db', async () => {
 		const facebookEvents = spoofFacebookEvents(3);

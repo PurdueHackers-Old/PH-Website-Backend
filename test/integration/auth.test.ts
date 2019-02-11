@@ -1,16 +1,22 @@
 import 'jest';
 import * as supertest from 'supertest';
-import Server from '../src/server';
-import { generateUser } from '../src/utils/helper';
+import * as jwt from 'jsonwebtoken';
+import Server from '../../src/server';
+import CONFIG from '../../src/config';
+import { generateUser, sleep } from '../helper';
+import { Member } from '../../src/models/member';
+import { ObjectId } from 'bson';
 
 let server: Server;
 let request: supertest.SuperTest<supertest.Test>;
 
 describe('Auth route tests', () => {
 	beforeAll(() =>
-		Server.createInstance()
-			.then(s => (server = s))
-			.then(s => (request = supertest(s.app))));
+		Server.createInstance().then(s => {
+			server = s;
+			request = supertest(s.app);
+		})
+	);
 
 	describe('Signup Tests', () => {
 		it('Fails because no name', async () => {
@@ -32,7 +38,7 @@ describe('Auth route tests', () => {
 				status
 			} = await request.post('/api/auth/signup').send(newUser);
 			expect(status).toEqual(400);
-			expect(error).toEqual('Please provide your email');
+			expect(error).toEqual('Please provide a valid email address');
 		});
 
 		it('Fails because invalid email', async () => {
@@ -43,7 +49,7 @@ describe('Auth route tests', () => {
 				status
 			} = await request.post('/api/auth/signup').send(newUser);
 			expect(status).toEqual(400);
-			expect(error).toEqual('Invalid email');
+			expect(error).toEqual('Please provide a valid email address');
 		});
 
 		it('Fails because password is too short', async () => {
@@ -98,9 +104,7 @@ describe('Auth route tests', () => {
 				status: statusCode
 			} = await request.post('/api/auth/signup').send(generatedUser);
 			expect(statusCode).toEqual(400);
-			expect(error).toEqual(
-				'An account already exists with that email. Please use your Purdue Hackers account password if you have one'
-			);
+			expect(error).toEqual('An account already exists with that email');
 		});
 
 		it('Successfully creates a user', async () => {
@@ -109,7 +113,7 @@ describe('Auth route tests', () => {
 				body: { response },
 				status
 			} = await request.post('/api/auth/signup').send(generatedUser);
-			expect(status).toStrictEqual(200);
+			expect(status).toEqual(200);
 			expect(response).toHaveProperty('token');
 			expect(response).toHaveProperty('user');
 			expect(response.user.name).toStrictEqual(generatedUser.name);
@@ -166,7 +170,7 @@ describe('Auth route tests', () => {
 				body: { response },
 				status
 			} = await request.post('/api/auth/signup').send(generatedUser);
-			expect(status).toStrictEqual(200);
+			expect(status).toEqual(200);
 			expect(response).toHaveProperty('token');
 			expect(response).toHaveProperty('user');
 			expect(response.user.name).toStrictEqual(generatedUser.name);
@@ -188,6 +192,111 @@ describe('Auth route tests', () => {
 			expect(response.user.email).toStrictEqual(generatedUser.email);
 			expect(response.user).not.toHaveProperty('password');
 			expect(response.user).toHaveProperty('_id');
+		});
+	});
+
+	describe('Refresh Token Tests', () => {
+		it('Fails to refresh with no token provided', async () => {
+			const {
+				body: { error },
+				status
+			} = await request.get('/api/auth/me');
+
+			expect(status).toEqual(401);
+			expect(error).toEqual('No token provided');
+		});
+
+		it('Fails to refresh with empty token provided', async () => {
+			const {
+				body: { error },
+				status
+			} = await request.get('/api/auth/me').auth('token', { type: 'bearer' });
+
+			expect(status).toEqual(401);
+			expect(error).toEqual('Invalid token');
+		});
+
+		it('Fails to refresh token with invalid data payload', async () => {
+			const token = jwt.sign({ blah: 'blah' }, CONFIG.SECRET, {
+				expiresIn: '7 days'
+			});
+			const {
+				body: { error },
+				status
+			} = await request.get('/api/auth/me').auth(token, { type: 'bearer' });
+
+			expect(status).toEqual(401);
+			expect(error).toEqual('Invalid token');
+		});
+
+		it('Fails to refresh token with non existant member', async () => {
+			const token = jwt.sign({ _id: 'invalid' }, CONFIG.SECRET, {
+				expiresIn: '7 days'
+			});
+			const {
+				body: { error },
+				status
+			} = await request.get('/api/auth/me').auth(token, { type: 'bearer' });
+
+			expect(status).toEqual(401);
+			expect(error).toEqual('Invalid token');
+		});
+
+		it('Fails to refresh token with non existant member', async () => {
+			const token = jwt.sign({ _id: new ObjectId() }, CONFIG.SECRET, {
+				expiresIn: '7 days'
+			});
+			const {
+				body: { error },
+				status
+			} = await request.get('/api/auth/me').auth(token, { type: 'bearer' });
+
+			expect(status).toEqual(401);
+			expect(error).toEqual('Member not found');
+		});
+
+		it('Successfully with non-expired token', async () => {
+			const generatedUser = generateUser();
+			const {
+				body: { response: user }
+			} = await request.post('/api/auth/signup').send(generatedUser);
+
+			const {
+				body: { response },
+				status
+			} = await request.get('/api/auth/me').auth(user.token, { type: 'bearer' });
+
+			expect(status).toEqual(200);
+			expect(response.user).toEqual(user.user);
+			expect(response.token).toBeTruthy();
+			const payload: any = jwt.decode(response.token);
+			expect(payload._id).toEqual(user.user._id);
+			const isExpired = Date.now() / 1000 > payload.exp;
+			expect(isExpired).toEqual(false);
+		});
+
+		it('Successfully refreshes an expired token', async () => {
+			const generatedUser = generateUser();
+			const {
+				body: { response: user }
+			} = await request.post('/api/auth/signup').send(generatedUser);
+
+			const newToken = jwt.sign({ _id: user.user._id }, CONFIG.SECRET, {
+				expiresIn: '1ms'
+			});
+			await sleep(2000);
+			const {
+				body: { response },
+				status
+			} = await request.get('/api/auth/me').auth(newToken, { type: 'bearer' });
+
+			expect(status).toEqual(200);
+			expect(response.user).toEqual(user.user);
+			expect(response.token).toBeTruthy();
+			const payload: any = jwt.decode(response.token);
+			expect(payload._id).toEqual(user.user._id);
+			const isExpired = Date.now() / 1000 > payload.exp;
+			expect(isExpired).toEqual(false);
 		});
 	});
 

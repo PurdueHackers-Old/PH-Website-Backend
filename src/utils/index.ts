@@ -1,18 +1,10 @@
-import { Request, Response } from 'express';
+import { Response, Request } from 'express';
 import { ObjectId } from 'mongodb';
-import * as GoogleCloudStorage from '@google-cloud/storage';
 import * as Multer from 'multer';
+import { ExtractJwt } from 'passport-jwt';
 import { IMemberModel, Member } from '../models/member';
 import { Permission, IPermissionModel } from '../models/permission';
-import CONFIG from '../config';
-export * from './email';
-
-const storage = new GoogleCloudStorage({
-	projectId: 'purduehackers-212319',
-	keyFilename: 'purduehackers.json'
-});
-
-const bucket = storage.bucket(CONFIG.GC_BUCKET);
+// export * from './email';
 
 export const multer = Multer({
 	storage: Multer.memoryStorage(),
@@ -67,55 +59,20 @@ export function to<T, U = any>(
 	promise: Promise<T>,
 	errorExt?: object
 ): Promise<[T | null, U | null]> {
-	return promise.then<[T, null]>((data: T) => [data, null]).catch<[null, U]>(err => {
-		if (errorExt) Object.assign(err, errorExt);
+	return promise
+		.then<[T, null]>((data: T) => [data, null])
+		.catch<[null, U]>(err => {
+			if (errorExt) Object.assign(err, errorExt);
 
-		return [null, err];
-	});
+			return [null, err];
+		});
 }
 
-export const uploadToStorage = async (
-	file: Express.Multer.File,
-	folder: string,
+export const addMemberToPermission = async (
+	member: IMemberModel,
+	permission: IPermissionModel,
 	user: IMemberModel
-) => {
-	if (!file) return 'No image file';
-	else if (folder === 'pictures' && !file.originalname.match(/\.(jpg|jpeg|png|gif)$/i))
-		return `File: ${file.originalname} is an invalid image type`;
-	else if (folder === 'resumes' && !file.originalname.match(/\.(pdf)$/i))
-		return `File: ${file.originalname} is an invalid image type`;
-
-	const fileName = `${folder}/${user.email.replace('@', '_')}`;
-	const fileUpload = bucket.file(fileName);
-
-	return new Promise<string>((resolve, reject) => {
-		const blobStream = fileUpload.createWriteStream({
-			metadata: {
-				contentType: file.mimetype,
-				cacheControl: 'no-cache, max-age=0'
-			}
-		});
-
-		blobStream.on('error', error => {
-			console.error(error);
-			reject('Something is wrong! Unable to upload at the moment.');
-		});
-
-		// blobStream.on('finish', () => {
-		// 	// The public URL can be used to directly access the file via HTTP.
-		// 	fileUpload.getMetadata().then(meta => resolve(meta['0'].mediaLink));
-		// });
-
-		blobStream.on('finish', () => {
-			// The public URL can be used to directly access the file via HTTP.
-			resolve(`https://storage.googleapis.com/${CONFIG.GC_BUCKET}/${fileName}`);
-		});
-
-		blobStream.end(file.buffer);
-	});
-};
-
-export const addMemberToPermission = async (member, permission, user) =>
+) =>
 	Promise.all([
 		Member.findByIdAndUpdate(
 			member._id,
@@ -150,6 +107,39 @@ export const addMemberToPermission = async (member, permission, user) =>
 			.exec()
 	]);
 
+export const removeMemberFromPermission = (member: IMemberModel, permission: IPermissionModel) =>
+	Promise.all([
+		Member.findByIdAndUpdate(
+			member._id,
+			{
+				$pull: {
+					permissions: permission._id
+				}
+			},
+			{ new: true }
+		).exec(),
+		Permission.findByIdAndUpdate(
+			permission._id,
+			{
+				$pull: {
+					members: {
+						member: member._id
+					}
+				}
+			},
+			{ new: true }
+		)
+			.populate({
+				path: 'members.member',
+				model: Member
+			})
+			.populate({
+				path: 'members.recordedBy',
+				model: Member
+			})
+			.exec()
+	]);
+
 export const addMemberToPermissions = async (
 	member: IMemberModel,
 	permissions: IPermissionModel[],
@@ -164,3 +154,15 @@ export const addMemberToPermissions = async (
 
 	return [member, perms];
 };
+
+export const toBoolean = (val: any, obj: any, type) => `${val}`.toLowerCase() === 'true';
+
+export const isNotEmpty = (obj: any, val: any) => val !== '' && val !== null && val !== undefined;
+
+export const extractToken = (req: Request) =>
+	ExtractJwt.fromExtractors([
+		ExtractJwt.fromAuthHeaderAsBearerToken(),
+		ExtractJwt.fromBodyField('token'),
+		ExtractJwt.fromHeader('token'),
+		ExtractJwt.fromUrlQueryParameter('token')
+	])(req);

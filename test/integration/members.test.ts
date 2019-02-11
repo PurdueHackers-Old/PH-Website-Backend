@@ -1,8 +1,8 @@
 import 'jest';
-import Server from '../src/server';
 import * as supertest from 'supertest';
-import { generateUsers } from '../src/utils/helper';
-import { IMemberModel } from '../src/models/member';
+import Server from '../../src/server';
+import { generateUsers } from '../helper';
+import { IMemberModel } from '../../src/models/member';
 
 let server: Server;
 let request: supertest.SuperTest<supertest.Test>;
@@ -11,9 +11,11 @@ let user: { user: IMemberModel; token: string };
 
 describe('Suite: /api/members', () => {
 	beforeAll(() =>
-		Server.createInstance()
-			.then(s => (server = s))
-			.then(s => (request = supertest(s.app))));
+		Server.createInstance().then(s => {
+			server = s;
+			request = supertest(s.app);
+		})
+	);
 
 	beforeEach(async () => {
 		members = await Promise.all<{ user: IMemberModel; token: string }>(
@@ -60,9 +62,7 @@ describe('Suite: /api/members', () => {
 			const {
 				body: { error },
 				status
-			} = await request.get(
-				`/api/members/${server.mongoose.Types.ObjectId()}`
-			);
+			} = await request.get(`/api/members/${server.mongoose.Types.ObjectId()}`);
 			expect(status).toEqual(400);
 			expect(error).toEqual('Member does not exist');
 		});
