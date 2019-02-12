@@ -2,6 +2,7 @@ import { Document, Schema, model } from 'mongoose';
 import { Type, Transform } from 'class-transformer';
 import { IsNotEmpty, IsOptional, Matches } from 'class-validator';
 import { IMemberModel } from './member';
+import "reflect-metadata";
 import { IsDate } from '../validators/date';
 import { toBoolean } from '../utils';
 
