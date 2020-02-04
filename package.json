@@ -31,7 +31,7 @@
 		"express": "~4.16.0",
 		"express-async-errors": "^3.0.0",
 		"googleapis": "^27.0.0",
-		"handlebars": "^4.0.11",
+		"handlebars": "^4.3.0",
 		"helmet": "^3.13.0",
 		"json-colorizer": "^2.1.2",
 		"jsonwebtoken": "^8.2.1",
