@@ -20,7 +20,7 @@
 		"@google-cloud/storage": "^1.7.0",
 		"@sendgrid/mail": "^6.3.1",
 		"axios": "^0.18.0",
-		"bcrypt": "^2.0.1",
+		"bcryptjs": "^2.4.3",
 		"bull": "^3.5.2",
 		"chalk": "^2.4.1",
 		"cookie-parser": "~1.4.3",
@@ -52,7 +52,7 @@
 		"yes-https": "^0.0.4"
 	},
 	"devDependencies": {
-		"@types/bcrypt": "^2.0.0",
+		"@types/bcryptjs": "^2.0.0",
 		"@types/body-parser": "^1.17.0",
 		"@types/bull": "^3.5.1",
 		"@types/cookie-parser": "^1.4.1",

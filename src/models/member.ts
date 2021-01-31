@@ -1,4 +1,4 @@
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { Document, Schema, model } from 'mongoose';
 import { IEventModel } from './event';
 import { IPermissionModel } from './permission';
@@ -198,7 +198,7 @@ const schema = new Schema(
 	{ timestamps: true }
 );
 
-schema.pre('save', async function(next) {
+schema.pre('save', async function (next) {
 	const member = this as IMemberModel;
 	if (member.isModified('password') || member.isNew) {
 		try {
@@ -213,7 +213,7 @@ schema.pre('save', async function(next) {
 	next();
 });
 
-schema.methods.comparePassword = function(password: string) {
+schema.methods.comparePassword = function (password: string) {
 	const member = this as IMemberModel;
 	return password && bcrypt.compareSync(password, member.password);
 };

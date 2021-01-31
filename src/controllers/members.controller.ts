@@ -1,7 +1,7 @@
 import { Request } from 'express';
 // import * as paginate from 'express-paginate';
 import { ObjectId } from 'mongodb';
-import { compare, compareSync } from 'bcrypt';
+import { compare, compareSync } from 'bcryptjs';
 import { Member, MemberDto, IMemberModel, majors } from '../models/member';
 import { Event, IEventModel } from '../models/event';
 import { Location } from '../models/location';
